@@ -109,12 +109,11 @@ class FirefAIghter():
         
         op = '-1'
         while op != '0':
-            op = str(input('Introduce la opcion que quieres ejecutrar:\n1.- Reconocimiento de zonas.\n2.- Ir a una zona y apagar fuego.\n3.- Deteccion fego\n4.- Shoot Water\n'))
+            op = str(input('Introduce la opcion que quieres ejecutrar:\n1.- Ver imagen Seguidor.\n2.- Ir a una zona y apagar fuego.\n3.- Deteccion fego\n4.- Shoot Water\n'))
             if op == '1':
-                self._lineFollower(op='store')
+                self._lineFollower(op='image')
             elif op == '2':
-                self._lineFollower(op='goto',zone=0)
-                #self._diodo()
+                self._lineFollower(op='goto')
                 self._HSLBlockRecognizerLMC()
             elif op =='3':
                 self._HSLBlockRecognizerLMC()
@@ -122,30 +121,22 @@ class FirefAIghter():
                 self._shootWater()
                
     def _lineFollower(self,op='',zone=None):
-        # op: 'store' executa el linefollowe i va guardant a l'abre binari
-        # op: 'goto' executa el linefollower i va cap a la zona.
-        self.picamera.resolution = (426,240)
+        self.picamera.resolution = (426,240) #trabajaremos con una resolucion inferior para disminuir el tiempo de procesado
         rawCapture = PiRGBArray(self.picamera)
         self.picamera.start_preview()
-        frame_rate = 30
-        
-        prev = 0
-        crearMapa = False
-        CountIrLlama = 0
-        irFuego = False
         aux = None
-        buscarApagar=False
-        
-        if op == 'store':
-            crearMapa = True #si hay que crear el mapa
+        if op == 'image':
+            image=True
             irFuego = False
-        else:
+        elif op == 'goto':
+            numSectores = 2 #Numero de sectores que guarda
+            image=False
             irFuego = True #si hay que ir a un sector
-            sectorLlamas = zone #que sector se quema
-            CountIrLlama = 1 #contador del camino al fuego
-
-        # Inicializar arbol
-        if crearMapa:
+            sectorLlamas = 1 #a que sector ir
+            CountIrLlama = 1 #contador auxiliar del camino al fuego
+        
+        if irFuego:
+            # Inicializar arbol
             CountBif=0
             CountSec=0
             pilaBif = BBT.Stack()
@@ -153,138 +144,72 @@ class FirefAIghter():
             root = BBT.Node(CountBif)
             aux = BBT.Node(1)
             aux = root
+            for a in range(0,numSectores):  
+                # BIFURCACION
+                CountBif = CountBif + 1
+                aux = aux.RecorrerMapa(CountBif)
+                pilaBif.pushh(CountBif)
+                # SECTOR
+                CountBif = CountBif + 1
+                aux.data = CountBif
+                pilaBif.pushh(CountBif)
+                auxSec = pilaBif.stack.copy()
+                Sectores.pushh(auxSec)
+                CountSec = CountSec + 1
+                aux = aux.padre
+                pilaBif.popp()                      
+            root.PrintTree()
+        #### Por cada sector creamos antes una bifurcacion
         
         for image in self.picamera.capture_continuous(rawCapture, format="bgr"):
             frame = image.array
             ## Capturar frame a frame
-            #time_elapsed = time.time() - prev
-            #ret, frame = cap.read()
             bif=0 #si bifurcacion 1
             sec=0 #si sector 1
-            
-            #if time_elapsed > 1./frame_rate:
-                
-            prev = time.time()
-            
-            
             image.truncate(0)
-            #crop_img = seguirLinea(io.imread("r.jpeg"))
-            
-
-            #######
-            #dist, distpx = SD.distance()
-            #######
-
-            #print ("Distancia: ",dist," Distnacia pixel: ",distpx)
-                    #cv2.line(frame,(214,240),(214,int(distpx)),(255,0,255),1)
-                    #cv2.imwrite("distancia.jpg", frame)    
-
-            #######         
-            """if dist <= 45:
-                        #parar
-                self._moveMotors(0,0,0,0,0,0,0)
-                print ("obstaculo")
-                        pass"""
-            ########
-
-            #cv2.imwrite("fotico.jpg", crop_img)
-            #cv2.imwrite("fotico2.jpg", crop_img)
-            #fotico=cv2.imread("fotico.jpg")
-
-            #######
-            #cv2.imshow('frame',crop_img)
-            #cv2.waitKey(0) #to raro
-            #######
-
-            #time.sleep(3)
-            #cv2.destroyAllWindows()
             
             ### Ir a un sector
             if irFuego:
                 p=0
-                crop_img,bif,sec,mappedCx = LF.seguirLinea(frame)
-                if bif==1:
-                    #self._moveMotors(1,0,0,1,self.potmotln,self.potmotrn,1)
-                    #time.sleep(0.3)
-                    self._moveMotors(0,0,0,1,p,self.potmotrn,1)
-                    time.sleep(1.3)
-                    self._moveMotors(1,0,0,1,self.potmotln,self.potmotrn,1)
-                    time.sleep(4)
-                    self._moveMotors(0,0,0,0,0,0,1)
-                    print("biurccion")
-                    '''if Sectores.stack[sectorLlamas][CountIrLlama] == aux.left.data:
-                            p=0
-                            self._moveMotors(1,0,0,1,self.potmotl,self.potmotr,1)
-                            #time.delay(1)
-                            self._moveMotors(0,0,0,1,p,self.potmotr,1)
-                        elif Sectores.stack[sectorLlamas][CountIrLlama] == aux.right.data:
-                            if mappedCx < 0:
-                                p=self.potmotl*((100-abs(mappedCx))/100)
-                                self._moveMotors(1,0,0,1,p,self.potmotr,1)
-                            elif mappedCx >= 0:
-                                p=self.potmotr*((100-abs(mappedCx))/100)
-                                self._moveMotors(1,0,0,1,self.potmotl,p,1)'''
+                crop_img,bif,sec,mappedCx = LF.seguirLinea(frame) #devuelve la imagen recortada, si es bifurcacion o sector o nada y lo separado que esta de la linea (de -100 a 100)
+                if bif==1: # si encuentra bifurcacion entra
+                    if Sectores.stack[sectorLlamas][CountIrLlama] == aux.left.data: #mira si en esta bifurcacion hay que ir a la izquierda
+                        p=0
+                        self._moveMotors(1,0,0,1,self.potmotl,self.potmotr,1) #sigue un poco recto 
+                        time.delay(1)
+                        self._moveMotors(0,0,0,1,p,self.potmotr,1) #ahora gira 90 grados a la izquierda
+                        time.delay(1.3)
+                        aux=aux.left
+                    elif Sectores.stack[sectorLlamas][CountIrLlama] == aux.right.data: #mira si en esta bifurcacion hay que ir a la derecha
+                        p=0
+                        if mappedCx < 0: #si detecta que la linea se encuentra a su izquierda entra
+                            p=self.potmotl*((100-abs(mappedCx))/100) #se asigna potencia al motor izquierdo en base a lo separado que este de la linea
+                            self._moveMotors(1,0,0,1,p,self.potmotr,1)
+                        elif mappedCx >= 0: #si detecta que la linea se encuentra a su derecha entra
+                            p=self.potmotr*((100-abs(mappedCx))/100) #se asigna potencia al motor derecho en base a lo separado que este de la linea
+                            self._moveMotors(1,0,0,1,self.potmotl,p,1)
+                        aux=aux.right
+                    CountIrLlama+=1
                 elif sec==1:
                     self._moveMotors(0,0,0,0,p,self.potmotrn,1)
-                    break
-                    #buscarAcabar=True
-                    #irFuego=False
-                   # self.picamera.resolution = (640,480)
+                    break #para los motores y entra en la parte de buscar fuego en el sector
                 else:
-                    if mappedCx < 0:
+                    if mappedCx < 0:#si detecta que la linea se encuentra a su izquierda entra
                         p=self.potmotln-((abs(mappedCx)))
                         print ("potencia motor l: ", p)
-                        self._moveMotors(1,0,0,1,p,self.potmotrn,1)
+                        self._moveMotors(1,0,0,1,p,self.potmotrn,1)#se asigna potencia al motor izquierdo en base a lo separado que este de la linea
                     else:
-                        p=self.potmotrn-((abs(mappedCx)))
+                        p=self.potmotrn-((abs(mappedCx)))#si detecta que la linea se encuentra a su derecha entra
                         print ("potencia motor r: ", p)
-                        self._moveMotors(1,0,0,1,self.potmotln,p,1)
+                        self._moveMotors(1,0,0,1,self.potmotln,p,1)#se asigna potencia al motor derecho en base a lo separado que este de la linea
 
             ###
             
-            ### Crear mapa
-            if crearMapa:
+            ### Ver seguidor linea
+            if image:
                 crop_img,bif,sec,mappedCx = LF.seguirLinea(frame)
                 cv2.imshow('frame',crop_img)
                 cv2.waitKey(0)
-                if bif==1:
-                    CountBif = CountBif + 1
-                    aux = aux.RecorrerMapa(CountBif)
-                    pilaBif.pushh(CountBif)
-                if sec==1: # SECTOR
-                    CountBif = CountBif + 1
-                    aux.data = CountBif
-                    pilaBif.pushh(CountBif)
-                    auxSec = pilaBif.stack.copy()
-                    Sectores.pushh(auxSec)
-                    CountSec = CountSec + 1
-                    aux = aux.padre
-                    pilaBif.popp()
-                root.PrintTree()
-            ###
-            #if buscarAcabar:
-                #self._moveMotors(0,0,0,1,0,self.potmotrn,1)
-                """if david:
-                    self._moveMotors(0,0,0,0,0,0,1)
-                    Pol foto
-                    fire, mapedx, mapedy = AF.apuntadorFuego(Pol)
-                """####
-
-                ####
-                ## Guardar frame en color o gris
-                #cv2.imwrite(time.strftime("%Y%m%d-%H%M%S"), frame)
-                #cv2.imwrite(time.strftime("%Y%m%d-%H%M%S"), gray)
-                ####
-
-                ####
-                ## Mostrar frame
-                #cv2.imshow('frame',gray)
-                #if cv2.waitKey(1) & 0xFF == ord('q'):
-                #   break
-                ####
-                    
-
-        #cap.release()
         cv2.destroyAllWindows()
     
     def _moveMotors(self,in1,in2,in3,in4,ena,enb,t):
