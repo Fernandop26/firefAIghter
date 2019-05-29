@@ -12,8 +12,6 @@ from threading import Thread, Lock
 import skimage
 import numpy as np
 import cv2
-from skimage.color import rgb2hsv
-from PIL import Image
 from picamera import PiCamera
 from picamera.array import PiRGBArray
 import picamera.array
@@ -34,7 +32,7 @@ from tflearn.layers.estimator import regression
 
 __author__  = "David Lucas (1458833), Pol Coma (1426607), Dani Romero (1459469), Enrique Fernández (1456537)"
 __license__ = "GPL"
-__date__    = "29/05/20019"
+__date__    = "29/05/2019"
 
 
 # Clase principal que engloba todo el proyecto
