@@ -12,4 +12,7 @@ Les funcionalitats descrites anteriorment tenen origen tècnic en l'assignatura 
 
 Per a executar el codi:
 
-if op == '1': # Execució del seguidor de linies self._lineFollower(op='store') elif op == '2': # Execució del seguidor de linies i detector de foc self._lineFollower(op='goto',zone=0) #self.identifyWhiteZones() elif op =='3': # Execució del LMC (Luminicense Motion Color detection) self.identifyWhiteZones() elif op == '4': # Disparar aigua sobre el foc self._shootWater()
+if op == '1': # Execució del seguidor de linies self._lineFollower(op='store') 
+elif op == '2': # Execució del seguidor de linies i detector de foc self._lineFollower(op='goto',zone=0) #self.identifyWhiteZones() 
+elif op =='3': # Execució del LMC (Luminicense Motion Color detection) self.identifyWhiteZones() 
+elif op == '4': # Disparar aigua sobre el foc self._shootWater()
